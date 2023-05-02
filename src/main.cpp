@@ -7,7 +7,7 @@
 
 #define MONITORWIFI_PERIOD 5000
 #define MYTASK_PERIOD 2000
-#define GETLOCATION_PERIOD 12000
+#define GETLOCATION_PERIOD 5500
 #define STARTUP_DELAY 3000
 #define LED 2
 
@@ -16,8 +16,8 @@ QueueHandle_t publish_queue;
 WiFiClient espClient;
 PubSubClient MQTTclient(espClient);
 
-const char* ssid = "LIB-2091526"; 
-const char* password = "ckFcqkkB8mkz";
+const char* ssid = "balboa271apartments"; 
+const char* password = "balboa271";
 String building = "";
 const char* MQTT_Broker = "35.173.206.112";
 const char* topic = "config";
@@ -90,23 +90,24 @@ vTaskDelay(MYTASK_PERIOD / portTICK_PERIOD_MS);
 
 void getLocation(void *p) {
   while(1) {
-    if((building == "Stefanni" || building == "Chardon") && InLandmark) {
-    Serial.print("Currently at ");
-    Serial.print(building);
-    building = "";
-  }
-  else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
-    Serial.print("Just arrived at ");
-    Serial.print(building);
-    InLandmark = true;
+    delay(5000);
+      if((building == "Stefanni" || building == "Chardon") && InLandmark) {
+      Serial.print("Currently at ");
+      Serial.print(building);
+      building = "";
+    }
+    else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
+      Serial.print("Just arrived at ");
+      Serial.print(building);
+      InLandmark = true;
 
-  } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
-    Serial.println("Just left landmark");
-    InLandmark = false;
-  }
-  else Serial.println("Not in a current landmark");
+    } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
+      Serial.println("Just left landmark");
+      InLandmark = false;
+    }
+    else Serial.println("Not in a current landmark");
 
-  vTaskDelay(GETLOCATION_PERIOD / portTICK_PERIOD_MS);
+    vTaskDelay(GETLOCATION_PERIOD / portTICK_PERIOD_MS);
   }
 }
 
@@ -125,8 +126,8 @@ void initMQTT() {
 
 int main(){
 // Initialize serial port
-//Serial.begin(115200);
-Serial.begin(9600);
+Serial.begin(115200);
+
 // Small Delay so that we don't miss the first few items printed
 vTaskDelay(STARTUP_DELAY / portTICK_PERIOD_MS);
 // Initialize WiFi and Connection to MQTT Broker
@@ -145,8 +146,6 @@ xTaskCreate(&my_task, "my_task", 2048,NULL,5,NULL );
 // Create a task that monitors whether we are in a landmark or not
 xTaskCreate(&getLocation, "getLocation", 2048, NULL, 5, NULL);
 }
-
-
 
 void setup() { main(); }
 void loop(){}
