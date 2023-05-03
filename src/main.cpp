@@ -7,7 +7,6 @@
 
 #define MONITORWIFI_PERIOD 5000
 #define MYTASK_PERIOD 2000
-#define GETLOCATION_PERIOD 5010
 #define STARTUP_DELAY 3000
 #define LED 2
 
@@ -44,6 +43,35 @@ Serial.println(WiFi.localIP());
 digitalWrite(LED, HIGH);
 }
 
+void post(String location) {
+  MQTTclient.publish(topic, location.c_str());
+  delay(1000);
+}
+
+void getLocation() {
+  if((building == "Stefanni" || building == "Chardon") && InLandmark) {
+    post("Currently at " + building);
+    Serial.println("Currently at ");
+    Serial.print(building);
+    building = "";
+  }
+  else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
+    post("Just arrived at " + building);
+    Serial.println("Just arrived at ");
+    Serial.print(building);
+    InLandmark = true;
+
+  } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
+    post("Just left landmark");
+    Serial.println("Just left landmark");
+    InLandmark = false;
+  }
+  else {
+    post("Not in a current landmark");
+    Serial.println("Not in a current landmark");
+  }
+}
+
 void monitor_wifi_task(void *p) {
 
 int n;
@@ -68,6 +96,7 @@ if(WiFi.SSID(i) == "Stefanni" || WiFi.SSID(i) == "Chardon") building = WiFi.SSID
 delay(10);
 }
 }
+getLocation();
 Serial.println("");
 xQueueSend(publish_queue, &n, (TickType_t) 0);
 //WiFi.reconnect();
@@ -86,39 +115,6 @@ Serial.println(n);
 vTaskDelay(MYTASK_PERIOD / portTICK_PERIOD_MS);
 }
 
-}
-
-void post(String location) {
-  MQTTclient.publish(topic, location.c_str());
-  delay(1000);
-}
-
-void getLocation(void *p) {
-  while(1) {
-    delay(5000);
-    if((building == "Stefanni" || building == "Chardon") && InLandmark) {
-      post("Currently at " + building);
-      Serial.print("Currently at ");
-      Serial.print(building);
-      building = "";
-    }
-    else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
-      post("Just arrived at " + building);
-      Serial.print("Just arrived at ");
-      Serial.print(building);
-      InLandmark = true;
-
-    } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
-      post("Just left landmark");
-      Serial.println("Just left landmark");
-      InLandmark = false;
-    }
-    else {
-      post("Not in a current landmark");
-      Serial.println("Not in a current landmark");
-    }
-    vTaskDelay(GETLOCATION_PERIOD / portTICK_PERIOD_MS);
-  }
 }
 
 void connectToMQTT() {
@@ -157,8 +153,6 @@ xTaskCreate(&monitor_wifi_task, "monitor_wifi_task", 2048,NULL,5,NULL );
 publish_queue = xQueueCreate(10, sizeof(int));
 xTaskCreate(&my_task, "my_task", 2048,NULL,5,NULL );
 
-// Create a task that monitors whether we are in a landmark or not
-xTaskCreate(&getLocation, "getLocation", 2048, NULL, 5, NULL);
 }
 
 void setup() { main(); }
