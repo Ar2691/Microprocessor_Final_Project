@@ -7,7 +7,7 @@
 
 #define MONITORWIFI_PERIOD 5000
 #define MYTASK_PERIOD 2000
-#define GETLOCATION_PERIOD 5500
+#define GETLOCATION_PERIOD 5010
 #define STARTUP_DELAY 3000
 #define LED 2
 
@@ -20,7 +20,7 @@ const char* ssid = "balboa271apartments";
 const char* password = "balboa271";
 String building = "";
 const char* MQTT_Broker = "35.173.206.112";
-const char* topic = "config";
+const char* topic = "Location";
 const int MQTT_Port = 1883;
 bool InLandmark = false;
 
@@ -88,25 +88,35 @@ vTaskDelay(MYTASK_PERIOD / portTICK_PERIOD_MS);
 
 }
 
+void post(String location) {
+  MQTTclient.publish(topic, location.c_str());
+  delay(1000);
+}
+
 void getLocation(void *p) {
   while(1) {
     delay(5000);
-      if((building == "Stefanni" || building == "Chardon") && InLandmark) {
+    if((building == "Stefanni" || building == "Chardon") && InLandmark) {
+      post("Currently at " + building);
       Serial.print("Currently at ");
       Serial.print(building);
       building = "";
     }
     else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
+      post("Just arrived at " + building);
       Serial.print("Just arrived at ");
       Serial.print(building);
       InLandmark = true;
 
     } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
+      post("Just left landmark");
       Serial.println("Just left landmark");
       InLandmark = false;
     }
-    else Serial.println("Not in a current landmark");
-
+    else {
+      post("Not in a current landmark");
+      Serial.println("Not in a current landmark");
+    }
     vTaskDelay(GETLOCATION_PERIOD / portTICK_PERIOD_MS);
   }
 }
@@ -114,7 +124,10 @@ void getLocation(void *p) {
 void connectToMQTT() {
   //Tries to connect to MQTT every 2 seconds 
   while(!MQTTclient.connected()) {
-    if(MQTTclient.connect("ESP32clientID")) MQTTclient.subscribe(topic);
+    if(MQTTclient.connect("ESP32clientID")) { 
+      MQTTclient.subscribe(topic);
+      Serial.println("Connected to MQTT Broker");
+    }
     else delay(2000);
   }
 }
@@ -134,6 +147,7 @@ vTaskDelay(STARTUP_DELAY / portTICK_PERIOD_MS);
 pinMode(LED, OUTPUT); //Turn on 2nd LED
 Serial.println("Connecting to WiFi");
 initWiFi();
+initMQTT();
 
 Serial.println("Starting All Tasks");
 // Create a task that monitors the WiFi hotspots
