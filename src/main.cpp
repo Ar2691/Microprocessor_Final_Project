@@ -46,47 +46,6 @@ Serial.println(WiFi.localIP());
 digitalWrite(LED, HIGH);
 }
 
-void post(String location) {
-  MQTTclient.publish(topic, location.c_str());
-  delay(1000);
-}
-
-void getLocation() {
-  if((building == "Stefanni" || building == "Chardon") && InLandmark) {
-    post("Currently at " + building);
-    Serial.println("Currently at ");
-    Serial.print(building);
-    building = "";
-    digitalWrite(ARRIVED_LANDMARK_LED, HIGH);
-    digitalWrite(LEFT_LANDMARK_LED, LOW);
-    digitalWrite(NOT_IN_LANDMARK_LED, LOW);
-  }
-  else if((building == "Stefanni" || building == "Chardon") && !InLandmark) {
-    post("Just arrived at " + building);
-    Serial.println("Just arrived at ");
-    Serial.print(building);
-    InLandmark = true;
-    digitalWrite(ARRIVED_LANDMARK_LED, HIGH);
-    digitalWrite(LEFT_LANDMARK_LED, LOW);
-    digitalWrite(NOT_IN_LANDMARK_LED, LOW);
-
-  } else if ((building != "Stefanni" || building != "Chardon") && InLandmark) {
-    post("Just left landmark");
-    Serial.println("Just left landmark");
-    InLandmark = false;
-    digitalWrite(ARRIVED_LANDMARK_LED, LOW);
-    digitalWrite(LEFT_LANDMARK_LED, HIGH);
-    digitalWrite(NOT_IN_LANDMARK_LED, LOW);
-  }
-  else {
-    post("Not in a current landmark");
-    Serial.println("Not in a current landmark");
-    digitalWrite(ARRIVED_LANDMARK_LED, LOW);
-    digitalWrite(LEFT_LANDMARK_LED, LOW);
-    digitalWrite(NOT_IN_LANDMARK_LED, HIGH);
-  }
-} 
-
 void monitor_wifi_task(void *p) {
 
 int n;
@@ -135,14 +94,9 @@ vTaskDelay(MYTASK_PERIOD / portTICK_PERIOD_MS);
 void connectToMQTT() {
   //Tries to connect to MQTT every 2 seconds 
   while(!MQTTclient.connected()) {
-    if(MQTTclient.connect("ESP32clientID")) { 
-      MQTTclient.subscribe(topic);
-      Serial.println("Connected to MQTT Broker");
-    }
-    else {
-      delay(2000);
+    if(MQTTclient.connect("ESP32clientID")) MQTTclient.subscribe(topic);
+    else delay(2000);
   }
-}
 }
 
 void initMQTT() {
